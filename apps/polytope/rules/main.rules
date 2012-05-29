@@ -1,0 +1,15 @@
+# Copyright: Matthias Walter, 2012
+# BOOST SOFTWARE LICENSE
+
+CREDIT extendedFormulations
+  Computing slack factorizations from extended formulations and vice versa.
+  Copyright by Matthias Walter.
+  http://github.com/xammy/polymake-extended-formulations/
+
+label extendedFormulations
+
+INCLUDE 
+  slack.rules
+  projection.rules
+  construction.rules
+

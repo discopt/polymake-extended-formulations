@@ -1,0 +1,21 @@
+# Computes the slack matrix //S// of a given polytope //P// with respect to its facet/vertex
+# representation. The entry for row a^t*x+b >= 0 and column v equals a^t*v+b.
+# @param Polytope P
+# @return Matrix //S//
+user_function slack_matrix(Polytope) 
+{
+  my $facets = $_[0]->FACETS;
+  my $vertices = $_[0]->VERTICES;
+  my $slack = new Matrix<Rational>($facets->rows(), $vertices->rows());
+  for (my $r = 0; $r < $slack->rows(); $r++)
+  {
+    for (my $c = 0; $c < $slack->cols(); $c++)
+    {
+      $slack->($r, $c) = ($facets->minor(range($r,$r), ~[0]) * transpose($vertices->minor(range($c,$c), ~[0])))->(0,0) 
+        / $vertices->($c,0) + $facets->($r,0);
+    }
+  }
+  return $slack;
+}
+
+

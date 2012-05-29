@@ -1,0 +1,19 @@
+# Constructs a polytope //Q// from a given polytope //P// and the left factor //T// of a 
+# nonnegative factorization of //P//'s slack matrix. //Q// has as many facets as //T// has columns
+# and there exists a linear map //pi// with //pi//(//Q//) = //P//.
+# @param Polytope P
+# @param Matrix T
+# @return Polytope //Q//
+user_function construct_extended_formulation(Polytope, Matrix) 
+{
+  my $P = $_[0];
+  my $T = $_[1];
+
+  my $q_eqs = new Matrix<Rational>($P->FACETS | -$T);
+  my $q_ineqs = new Matrix<Rational>($T->cols(), $P->FACETS->cols() + $T->cols());
+  $q_ineqs->minor(All, range($P->FACETS->cols(), $P->FACETS->cols() + $T->cols() - 1)) = unit_matrix<Rational>($T->cols());
+
+  my $Q = new Polytope<Rational>(INEQUALITIES=>$q_ineqs, EQUATIONS=>$q_eqs);
+
+  return $Q;
+}

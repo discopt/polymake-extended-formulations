@@ -1,0 +1,83 @@
+# Projects the polytope //Q// via the linear projection map //pi// onto the polytope //P//.
+# Furthermore, computes the corresponding nonnegative factorization //S//=//T//*//U// of //P//'s slack
+# matrix //S// such that //T// has #facets(//Q//) many columns.
+# @param Polytope Q
+# @param Matrix pi
+# @return Tuple //P//,//T//,//U//
+user_function projection2factorization(Polytope, Matrix) 
+{
+  my $Proj = $_[1];
+  my $Q = $_[0];
+  my $q_num_vars = $Proj->cols();
+  my $p_num_vars = $Proj->rows();
+  my $q_num_affines = $Q->AFFINE_HULL->rows();
+
+  # Carry out the projection via points.
+  my $p_points = new Matrix<Rational>($Q->VERTICES->rows(), 1 + $Proj->rows());
+  $p_points->col(0) = $Q->VERTICES->col(0); # scaling remains the same.
+  $p_points->minor(All,~[0]) = $Q->VERTICES->minor(All, ~[0]) * transpose($Proj);
+
+  my $P = new Polytope<Rational>(POINTS=>$p_points);
+
+  # Construct the left factor by solving an LP for each row.
+  my $left_factor = new Matrix<Rational>($P->N_FACETS, $Q->N_FACETS);
+
+  # Most of the LP remains constant for all rows.
+  my $lp_fix_ineqs = new Matrix<Rational>($Q->N_FACETS, 1 + $Q->N_FACETS + $q_num_affines);
+
+  # inequalities are y_i >= 0
+  $lp_fix_ineqs->minor(All, range(1,$Q->N_FACETS)) = unit_matrix<Rational>($Q->N_FACETS);
+
+  # equations are for projection cone.
+  my $lp_fix_eqs = new Matrix<Rational>(1 + $q_num_vars, 1 + $Q->N_FACETS + $q_num_affines);
+  $lp_fix_eqs->minor([0], range(1, $Q->N_FACETS)) = -1 * transpose($Q->FACETS->minor(All,[0]));
+  $lp_fix_eqs->minor(range(1,$q_num_vars), range(1, $Q->N_FACETS)) = transpose($Q->FACETS->minor(All,~[0]));
+  if ($q_num_affines > 0)
+  {
+    $lp_fix_eqs->minor([0], range(1 + $Q->N_FACETS, $Q->N_FACETS + $q_num_affines)) 
+      = -1 * transpose($Q->AFFINE_HULL->minor(All,[0]));
+    $lp_fix_eqs->minor(range(1,$q_num_vars), range(1 + $Q->N_FACETS, $Q->N_FACETS + $q_num_affines)) 
+      = transpose($Q->FACETS->minor(All,~[0]));
+  }
+  
+  print $lp_fix_ineqs;
+  print "\n";
+  print $lp_fix_eqs;
+
+  for (my $facet = 0; $facet < $P->N_FACETS; $facet++)
+  {
+    my $lp_ineqs = new Matrix<Rational>($lp_fix_ineqs);
+    my $lp_eqs = new Matrix<Rational>($lp_fix_eqs);
+
+    $lp_eqs->(0,0) = $P->FACETS->($facet, 0);
+    $lp_eqs->minor(~[0],[0]) = -transpose($P->FACETS->minor([$facet],~[0]) * $Proj);
+
+    my $lp = new Polytope<Rational>(INEQUALITIES=>$lp_ineqs, EQUATIONS=>$lp_eqs);
+    my $solution = $lp->ONE_VERTEX;
+    my $temp = new Matrix<Rational>($solution);
+    $left_factor->minor([$facet], All) = $temp->minor(All, ~[0]) / $temp->(0,0);
+  }
+
+  my $right_factor = new Matrix<Rational>($Q->N_FACETS, $P->N_VERTICES);
+
+  for (my $vertex = 0; $vertex < $P->N_VERTICES; $vertex++)
+  {
+    my $found_index = -1;
+    for (my $point = 0; $point < $p_points->rows(); $point++)
+    {
+      my $scaled_point = new Matrix<Rational>($p_points->minor([$point], ~[0]) * $P->VERTICES->($vertex,0));
+      my $scaled_vertex = new Matrix<Rational>($P->VERTICES->minor([$vertex], ~[0]) * $p_points->($point,0));
+      if ($scaled_point == $scaled_vertex)
+      {
+        $found_index = $point;
+      }
+    }
+  
+    # compute Q's slack of found vertex
+    $right_factor->minor(All, [$vertex]) = $Q->FACETS->minor(All, ~[0]) * transpose($Q->VERTICES->minor([$found_index], ~[0]));
+    $right_factor->minor(All, [$vertex]) /= $Q->VERTICES->($found_index, 0);
+    $right_factor->minor(All, [$vertex]) += $Q->FACETS->minor(All, [0]);
+  }
+
+  return ($P, $left_factor, $right_factor);
+}
