@@ -37,13 +37,9 @@ user_function projection2factorization(Polytope, Matrix)
     $lp_fix_eqs->minor([0], range(1 + $Q->N_FACETS, $Q->N_FACETS + $q_num_affines)) 
       = -1 * transpose($Q->AFFINE_HULL->minor(All,[0]));
     $lp_fix_eqs->minor(range(1,$q_num_vars), range(1 + $Q->N_FACETS, $Q->N_FACETS + $q_num_affines)) 
-      = transpose($Q->FACETS->minor(All,~[0]));
+      = transpose($Q->AFFINE_HULL->minor(All,~[0]));
   }
   
-  print $lp_fix_ineqs;
-  print "\n";
-  print $lp_fix_eqs;
-
   for (my $facet = 0; $facet < $P->N_FACETS; $facet++)
   {
     my $lp_ineqs = new Matrix<Rational>($lp_fix_ineqs);
@@ -55,7 +51,7 @@ user_function projection2factorization(Polytope, Matrix)
     my $lp = new Polytope<Rational>(INEQUALITIES=>$lp_ineqs, EQUATIONS=>$lp_eqs);
     my $solution = $lp->ONE_VERTEX;
     my $temp = new Matrix<Rational>($solution);
-    $left_factor->minor([$facet], All) = $temp->minor(All, ~[0]) / $temp->(0,0);
+    $left_factor->minor([$facet], All) = $temp->minor(All, range(1, $left_factor->cols())) / $temp->(0,0);
   }
 
   my $right_factor = new Matrix<Rational>($Q->N_FACETS, $P->N_VERTICES);
