@@ -1,0 +1,33 @@
+This Polymake extension enables the user to
+carry out the mapping of a polytope Q via a
+linear map pi, resulting in a polytope P = pi(Q).
+In such a scenario, Q (along with pi) is called
+an extension of P. 
+
+The slack matrix of a polytope P (given by
+facets a_i^t*x + b_i >= 0 for i=1,2,...,m
+and vertices v in V) is an m x |V| matrix
+with entries S_{i,v} = a_i^t*v + b_i.
+
+A nonnegative matrix factorization of S is
+a factorization S = T * U such that
+T and U are nonnegative matrices. The
+rank of a factorization is the width of T
+(which equals the height of U).
+
+For every extended formulation P = pi(Q) there
+exists a nonnegative factorization of S such 
+that the rank is equal to #facets(Q).
+On the other hand, every nonnegative factorization
+of S implies the existance of an extension Q
+with the same property.
+
+This Polymake extension provides functionality
+to compute the slack matrix of a polytope, carry
+out such a projection yielding the two factors
+and constructing an extension from a given factorization.
+
+To use the extension, simply carry out the following command:
+
+import_extension ("/unpacked/directory/");
+
