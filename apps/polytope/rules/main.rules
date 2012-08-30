@@ -12,4 +12,5 @@ INCLUDE
   slack.rules
   projection.rules
   construction.rules
+  balas.rules
 

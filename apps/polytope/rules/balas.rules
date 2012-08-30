@@ -1,0 +1,64 @@
+# Constructs a polytope //Q// several given polytopes //P_1// ... //P_k// such that
+# that //Q// is an extended formulation of the convex hull of the union of all //P_i//.
+# @return Polytope //Q// and projection matrix //Proj//
+user_function construct_disjunctive_program {
+  my @P = @_;
+  my $k = @P;
+  my $vars = $P[0]->AMBIENT_DIM;
+  my $p_eqs = 0;
+  my $p_ineqs = 0;
+  for (my $i = 0; $i < $k; $i++)
+  {
+    $p_eqs += $P[$i]->AFFINE_HULL->rows();
+    $p_ineqs += $P[$i]->FACETS->rows();
+  }
+
+  my $q_eqs = new Matrix<Rational>(1 + $vars + $p_eqs, ($k+1) * ($vars+1));
+
+  $q_eqs->(0,0) = -1;
+  for (my $i = 0; $i < $k; $i++)
+  {
+    $q_eqs->(0, ($i+1) * ($vars+1)) = 1;
+  }
+  $q_eqs->minor(range(1, $vars), range(1, $vars)) = -1 * unit_matrix<Rational>($vars);
+  for (my $i = 0; $i < $k; $i++)
+  {
+    $q_eqs->minor(range(1, $vars), range(($i+1) * ($vars+1) + 1, ($i+1) * ($vars+1) + $vars)) = unit_matrix<Rational>($vars);
+  }
+
+  $p_eqs = 1 + $vars;
+  for (my $i = 0; $i < $k; $i++)
+  {
+    if ($P[$i]->AFFINE_HULL->rows() > 0)
+    {
+      $q_eqs->minor(range($p_eqs, $p_eqs + $P[$i]->AFFINE_HULL->rows() - 1), range(($i+1)*($vars+1), ($i+2)*($vars+1) - 1))
+        = $P[$i]->AFFINE_HULL->minor(All, All);
+    }
+    $p_eqs += $P[$i]->AFFINE_HULL->rows();
+  }
+
+  my $q_ineqs = new Matrix<Rational>($vars + $p_ineqs, ($k+1) * ($vars+1));
+
+  for (my $i = 0; $i < $k; $i++)
+  {
+    $q_ineqs->($i, ($i+1)*($vars + 1)) = 1;
+  }
+
+  $p_ineqs = $k;
+  for (my $i = 0; $i < $k; $i++)
+  {
+    if ($P[$i]->FACETS->rows() > 0)
+    {
+      $q_ineqs->minor(range($p_ineqs, $p_ineqs + $P[$i]->FACETS->rows() - 1), range(($i+1)*($vars+1), ($i+2)*($vars+1) - 1))
+        = $P[$i]->FACETS->minor(All, All);
+    }
+    $p_ineqs += $P[$i]->FACETS->rows();
+  }
+
+  my $Q = new Polytope<Rational>(INEQUALITIES=>$q_ineqs, EQUATIONS=>$q_eqs);
+
+  my $Proj = new Matrix<Rational>($vars, ($k+1)*($vars+1) - 1);
+  $Proj->minor(All, range(0, $vars-1)) = unit_matrix<Rational>($vars);
+
+  return $Q, $Proj;
+}
